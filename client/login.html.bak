@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><title>登录</title></head>
+try {
+  const isAdmin = (localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1');
+  if (isAdmin) {
+    const top = document.getElementById('topnav');
+    top.innerHTML = `
+      <a href="/">登录</a>
+      <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
+      <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
+      <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+      <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+    `;
+    document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+  } else {
+    if (localStorage.getItem('token')) {
+      document.getElementById('logoutLink').style.display = 'inline';
+      const o = document.getElementById('ordersLink'); if (o) o.style.display = 'inline';
+    }
+    document.querySelectorAll('a[data-protect="auth"]').forEach(a=>{
+      a.addEventListener('click', (e)=>{ try{ if (!localStorage.getItem('token')) { e.preventDefault(); alert('请先登录'); } }catch(err){} });
+    });
+  }
+} catch(e) {}
+    if (localStorage.getItem('token')) {
+      document.getElementById('logoutLink').style.display = 'inline';
+      const o = document.getElementById('ordersLink'); if (o) o.style.display = 'inline';
+    }
+  }
+  document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+  document.querySelectorAll('a[data-protect="auth"]').forEach(a=>{
+    a.addEventListener('click', (e)=>{ try{ if (!localStorage.getItem('token')) { e.preventDefault(); alert('请先登录'); } }catch(err){} });
+  });
+}catch(e){}
+</script>
+
+<h2>登录</h2>
+
+<div>
+  <label><input type="radio" name="mode" value="user" checked/> 用户登录</label>
+  <label style="margin-left:12px"><input type="radio" name="mode" value="admin"/> 管理员登录</label>
+</div>

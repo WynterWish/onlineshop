@@ -1,0 +1,116 @@
+<!doctype html><html><head><meta charset="utf-8"><title>商品管理</title>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="/js/common.js"></script>
+</head>
+<body>
+<div id="topnav" style="background:#f5f5f5;padding:8px;border-bottom:1px solid #ddd;">
+  <a href="/">登录</a>
+  <a href="/index.html" style="margin-left:12px">商品列表</a>
+  <a href="/cart.html" style="margin-left:12px">购物车</a>
+    <a id="ordersLink" href="/orders.html" style="margin-left:12px;display:none">我的订单</a>
+    <a id="adminLink" href="/admin/products.html" style="margin-left:12px;display:none" data-protect="auth">商品管理</a>
+    <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px;display:none">订单管理</a>
+  <a id="logoutLink" href="#" style="margin-left:12px;display:none">注销</a>
+     <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px;display:none">销售报表</a>
+</div>
+  <script>
+  try{
+    const isAdmin = (localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1');
+    if (isAdmin) {
+      const top = document.getElementById('topnav');
+      top.innerHTML = `
+        <a href="/">登录</a>
+        <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
+        <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
+        <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+        <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+      `;
+      // 绑定注销
+      document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+    } else {
+      if (localStorage.getItem('token')) {
+        document.getElementById('logoutLink').style.display = 'inline';
+        const o = document.getElementById('ordersLink'); if (o) o.style.display = 'inline';
+      }
+    }
+    document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+    document.querySelectorAll('a[data-protect="auth"]').forEach(a=>{
+      a.addEventListener('click', (e)=>{ try{ if (!localStorage.getItem('token')) { e.preventDefault(); alert('请先登录'); location.href = '/'; } }catch(err){} });
+    });
+  }catch(e){};
+  </script>
+
+<h2>商品管理</h2>
+<div>
+  <input id="kw" placeholder="关键词">
+  <button onclick="load()">搜索</button>
+  <button onclick="showAdd()">添加商品</button>
+  <span style="margin-left:12px;color:#666">提示：删除操作将永久移除商品</span>
+</div>
+<table border="1" cellpadding="6"><thead><tr><th>ID</th><th>名称</th><th>价格</th><th>库存</th><th>操作</th></tr></thead>
+<tbody id="list"></tbody></table>
+
+<div id="formDiv" style="display:none;margin-top:10px;border:1px solid #ddd;padding:8px;max-width:420px;">
+  <h3 id="formTitle">添加商品</h3>
+  <label>名称<br><input id="name" placeholder="名称" style="width:100%"></label><br>
+  <label>价格<br><input id="price" placeholder="价格" type="number" style="width:100%"></label><br>
+  <label>库存<br><input id="stock" placeholder="库存" type="number" style="width:100%"></label><br>
+  <button id="saveBtn" onclick="save()">添加</button>
+  <button onclick="cancel()">取消</button>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = 'login.html';
+const ax = axios.create({
+  baseURL: '/api/admin',
+  headers: { 'Authorization': 'Bearer ' + token }
+});
+let editingId = 0;
+function load() {
+  const kw = document.getElementById('kw').value.trim();
+  ax.get('/products', { params: { kw } }).then(r => {
+    document.getElementById('list').innerHTML = r.data.map(p => `
+      <tr><td>${p.id}</td><td>${p.name}</td><td>${p.price}</td><td>${p.stock}</td>
+          <td><button onclick="edit(${p.id},'${p.name}',${p.price},${p.stock})">改</button>
+              <button onclick="del(${p.id})">删</button></td></tr>`).join('');
+  });
+}
+load();
+function showAdd() {
+  editingId = 0;
+  document.getElementById('formTitle').innerText = '添加商品';
+  document.getElementById('saveBtn').innerText = '添加';
+  document.getElementById('name').value = '';
+  document.getElementById('price').value = '';
+  document.getElementById('stock').value = '';
+  document.getElementById('formDiv').style.display = 'block';
+}
+function cancel() { document.getElementById('formDiv').style.display = 'none'; }
+function edit(id, n, pr, st) {
+  editingId = id;
+  document.getElementById('formTitle').innerText = '编辑商品 #' + id;
+  document.getElementById('saveBtn').innerText = '保存';
+  document.getElementById('name').value = n;
+  document.getElementById('price').value = pr;
+  document.getElementById('stock').value = st;
+  document.getElementById('formDiv').style.display = 'block';
+}
+function save() {
+  const data = {
+    name: document.getElementById('name').value,
+    price: +document.getElementById('price').value,
+    stock: +document.getElementById('stock').value
+  };
+  if (!data.name) return alert('请填写名称');
+  if (!Number.isFinite(data.price) || data.price < 0) return alert('请输入有效价格');
+  if (!Number.isInteger(data.stock) || data.stock < 0) return alert('请输入有效库存');
+  const req = editingId ? ax.put('/products/' + editingId, data) : ax.post('/products', data);
+  req.then(() => { cancel(); load(); }).catch(e => alert((e.response && e.response.data && e.response.data.error) || '失败'));
+}
+function del(id) {
+  if (!confirm('确定永久删除该商品？此操作不可恢复。')) return;
+  ax.delete('/products/' + id).then(() => { alert('已删除'); load(); }).catch(e => alert('删除失败'));
+}
+</script>
+</body></html>

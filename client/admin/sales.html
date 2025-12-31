@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>销售报表</title>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="/js/common.js"></script>
+</head>
+<body>
+<div id="topnav" style="background:#f5f5f5;padding:8px;border-bottom:1px solid #ddd;">
+  <a href="/">登录</a>
+  <a href="/index.html" style="margin-left:12px">商品列表</a>
+  <a href="/cart.html" style="margin-left:12px">购物车</a>
+  <a id="adminLink" href="/admin/products.html" style="margin-left:12px;display:none">商品管理</a>
+  <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px;display:none">订单管理</a>
+  <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px;display:none">销售报表</a>
+  <a id="logoutLink" href="#" style="margin-left:12px;display:none">注销</a>
+</div>
+<script>
+try{
+  const isAdmin = (localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1');
+  const token = localStorage.getItem('token');
+  if (!token || !isAdmin) { alert('需要管理员权限'); location.href = '/'; }
+  const top = document.getElementById('topnav');
+  top.innerHTML = `
+    <a href="/">登录</a>
+    <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
+    <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
+    <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+    <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+  `;
+  document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+}catch(e){}
+</script>
+
+<h2>销售报表</h2>
+<div id="summary" style="margin-top:12px">加载中...</div>
+<script>
+const token = localStorage.getItem('token');
+if (!token) { alert('请先登录'); location.href = '/'; }
+// 请求管理员接口统计已发货订单总额
+(async function(){
+  try{
+    const res = await fetch('/api/admin/orders?status=已发货', { headers: { Authorization: 'Bearer ' + token }});
+    if (!res.ok) return document.getElementById('summary').innerText = '无法获取数据';
+    const rows = await res.json();
+    const total = rows.reduce((s,r)=> s + Number(r.total||0), 0);
+    document.getElementById('summary').innerHTML = `<strong>已发货订单总额：</strong> ￥${total.toFixed(2)} （共 ${rows.length} 笔）`;
+  }catch(e){ document.getElementById('summary').innerText = '获取失败'; }
+})();
+</script>
+</body>
+</html>

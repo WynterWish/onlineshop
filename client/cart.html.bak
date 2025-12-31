@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+try{
+  const isAdmin = (localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1');
+  if (isAdmin) {
+    const top = document.getElementById('topnav');
+    top.innerHTML = `
+      <a href="/">登录</a>
+      <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
+      <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
+      <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+      <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+    `;
+    document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+  } else {
+    if (localStorage.getItem('token')) {
+      document.getElementById('logoutLink').style.display = 'inline';
+      const o = document.getElementById('ordersLink'); if (o) o.style.display = 'inline';
+    }
+    document.querySelectorAll('a[data-protect="auth"]').forEach(a=>{
+      a.addEventListener('click', (e)=>{ try{ if (!localStorage.getItem('token')) { e.preventDefault(); alert('请先登录'); } }catch(err){} });
+    });
+  }
+}catch(e){};
+    if (isAdmin) {
+      const top = document.getElementById('topnav');
+      top.innerHTML = `
+        <a href="/">登录</a>
+        <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
+        <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
+        <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+        <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+      `;
+      document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+    } else {
+      if (localStorage.getItem('token')) {
+        document.getElementById('logoutLink').style.display = 'inline';
+        const o = document.getElementById('ordersLink'); if (o) o.style.display = 'inline';
+      }
+      document.querySelectorAll('a[data-protect="auth"]').forEach(a=>{ a.addEventListener('click', (e)=>{ try{ if (!localStorage.getItem('token')) { e.preventDefault(); alert('请先登录'); } }catch(err){} }); });
+    }
+  }catch(e){}
+  </script>
+  <div style="text-align:right;padding:8px"><a href="/index.html">返回商品列表 ←</a></div>
+  <div id="msg"></div>
+  <table id="cart">
+    <thead><tr><th>商品</th><th>单价</th><th>数量</th><th>小计</th><th>操作</th></tr></thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr><td colspan="3">总计</td><td id="total">0</td><td><button id="checkout">下单</button></td></tr>
+    </tfoot>
+  </table>
+
+<script>
+async function load() {
+  const token = localStorage.getItem('token');
+  if (!token) return document.getElementById('msg').innerText = '请先登录';
+  const res = await fetch('/api/cart', { headers: { 'Authorization': 'Bearer ' + token }});
+  if (!res.ok) return document.getElementById('msg').innerText = '无法获取购物车';
+  const rows = await res.json();
+  const tbody = document.querySelector('#cart tbody');
+  tbody.innerHTML = rows.map(r => `
+    <tr data-id="${r.id}">
+      <td>${r.name}</td>
+      <td>${r.price.toFixed(2)}</td>
+      <td><input type="number" min="1" value="${r.quantity}" style="width:60px"/></td>
+      <td class="subtotal">${(r.price * r.quantity).toFixed(2)}</td>
+      <td>
+        <button class="update">更新</button>
+        <button class="remove">删除</button>
+      </td>
+    </tr>
+  `).join('');
+  recalc();
+  attachHandlers();
+}
+
+function recalc(){
+  let total = 0;
+  document.querySelectorAll('#cart tbody tr').forEach(tr => {
+    const price = parseFloat(tr.children[1].innerText);
+    const qty = Number(tr.querySelector('input').value);
+    const sub = price * qty;
+    tr.querySelector('.subtotal').innerText = sub.toFixed(2);
+    total += sub;
+  });
+  document.getElementById('total').innerText = total.toFixed(2);
+}
+
+function attachHandlers(){
+  document.querySelectorAll('#cart .update').forEach(btn => btn.onclick = async (e) => {
+    const tr = e.target.closest('tr');
+    const id = tr.dataset.id;
+    const quantity = Number(tr.querySelector('input').value);
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/cart/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ quantity })
+    });
+    if (res.ok) { recalc(); alert('已更新'); } else alert('更新失败');
+  });
+
+  document.querySelectorAll('#cart .remove').forEach(btn => btn.onclick = async (e) => {
+    if (!confirm('确认删除该项？')) return;
+    const tr = e.target.closest('tr');
+    const id = tr.dataset.id;
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/cart/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token }});
+    if (res.ok) { tr.remove(); recalc(); } else alert('删除失败');
+  });
+}
+
+document.getElementById('checkout').onclick = async () => {
+  const total = Number(document.getElementById('total').innerText);
+  if (total <= 0) return alert('购物车为空');
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ total })
+  });
+  if (res.ok) {
+    alert('下单成功');
+    // 简单处理：刷新页面，用户可查看订单
+    load();
+  } else {
+    alert('下单失败');
+  }
+}
+
+load();
+</script>
+</body>
+</html>

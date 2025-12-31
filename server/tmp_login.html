@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><title>商品列表</title></head>
+<body>
+<div style="text-align:right;padding:8px"><a href="/cart.html">购物车 🛒</a></div>
+<h2>商品列表</h2>
+<div id="list"></div>
+<script>
+fetch('http://localhost:5000/api/products')
+  .then(r => r.json())
+  .then(arr => {
+    document.getElementById('list').innerHTML = arr.map(p => `
+      <div>${p.name} ￥${p.price} 库存${p.stock}
+        <button onclick="add(${p.id})">加购物车</button>
+      </div>`).join('');
+  });
+async function add(id) {
+  const token = localStorage.getItem('token');
+  if (!token) return alert('请先登录');
+  await fetch('http://localhost:5000/api/cart', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ productId: id, quantity: 1 })
+  });
+  alert('已加入购物车');
+}
+</script>
+</body></html>

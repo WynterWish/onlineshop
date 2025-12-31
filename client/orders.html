@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>我的订单</title></head>
+<body>
+<div id="topnav" style="background:#f5f5f5;padding:8px;border-bottom:1px solid #ddd;">
+  <a href="/">登录</a>
+  <a href="/index.html" data-protect="auth" style="margin-left:12px">商品列表</a>
+  <a href="/cart.html" data-protect="auth" style="margin-left:12px">购物车</a>
+  <a id="ordersLink" href="/orders.html" data-protect="auth" style="margin-left:12px;display:none">我的订单</a>
+  <a id="adminLink" href="/admin/products.html" style="margin-left:12px;display:none">商品管理</a>
+  <a id="logoutLink" href="#" style="margin-left:12px;display:none">注销</a>
+  </div>
+  <script src="/js/common.js"></script>
+  <script>
+try{
+  const isAdmin = (localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1');
+  if (isAdmin) {
+    const top = document.getElementById('topnav');
+    top.innerHTML = `
+      <a href="/">登录</a>
+      <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
+      <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
+      <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+      <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+    `;
+    document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+  } else {
+    if (localStorage.getItem('token')) {
+      document.getElementById('logoutLink').style.display = 'inline';
+      const o = document.getElementById('ordersLink'); if (o) o.style.display = 'inline';
+    }
+    document.querySelectorAll('a[data-protect="auth"]').forEach(a=>{
+      a.addEventListener('click', (e)=>{ try{ if (!localStorage.getItem('token')) { e.preventDefault(); alert('请先登录'); } }catch(err){} });
+    });
+  }
+}catch(e){};
+</script>
+<h2>我的订单</h2>
+<div id="msg"></div>
+<table border="1" cellpadding="6" style="width:100%;border-collapse:collapse"><thead><tr><th>订单ID</th><th>总额</th><th>状态</th><th>创建时间</th></tr></thead>
+<tbody id="list"></tbody></table>
+
+<script>
+async function load() {
+  const token = localStorage.getItem('token');
+  if (!token) return document.getElementById('msg').innerText = '请先登录';
+  const res = await fetch('/api/orders', { headers: { 'Authorization': 'Bearer ' + token }});
+  if (!res.ok) return document.getElementById('msg').innerText = '无法获取订单';
+  const rows = await res.json();
+  if (!rows.length) { document.getElementById('list').innerHTML = '<tr><td colspan="4">暂无订单</td></tr>'; return; }
+  document.getElementById('list').innerHTML = rows.map(r => `
+    <tr data-id="${r.id}">
+      <td>${r.id}</td>
+      <td>￥${Number(r.total).toFixed(2)}</td>
+      <td class="status">${r.status || ''}</td>
+      <td>${r.created_at || r.createdAt || ''}</td>
+      <td>${(r.status && r.status !== '待发货') ? '' : `<button class="payBtn" data-id="${r.id}">支付</button>`}</td>
+    </tr>
+  `).join('');
+  // attach pay handlers
+  document.querySelectorAll('.payBtn').forEach(b => b.addEventListener('click', async (e) => {
+    const id = e.target.dataset.id;
+    const token = localStorage.getItem('token');
+    if (!token) return alert('请先登录');
+    const res = await fetch('/api/orders/' + id + '/pay', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }});
+    if (res.ok) {
+      alert('支付成功');
+      const tr = document.querySelector('tr[data-id="' + id + '"]');
+      if (tr) {
+        const st = tr.querySelector('.status'); if (st) st.innerText = '已支付';
+        e.target.remove();
+      }
+    } else {
+      const j = await res.json().catch(()=>null);
+      alert((j && j.error) || '支付失败');
+    }
+  }));
+}
+load();
+</script>
+</body>
+</html>

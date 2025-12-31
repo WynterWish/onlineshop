@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>订单管理</title>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="/js/common.js"></script>
+</head>
+<body>
+<div id="topnav" style="background:#f5f5f5;padding:8px;border-bottom:1px solid #ddd;">
+  <a href="/">登录</a>
+  <a href="/index.html" style="margin-left:12px">商品列表</a>
+  <a href="/cart.html" style="margin-left:12px">购物车</a>
+  <a id="adminLink" href="/admin/products.html" style="margin-left:12px;display:none">商品管理</a>
+  <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px;display:none">订单管理</a>
+  <a id="logoutLink" href="#" style="margin-left:12px;display:none">注销</a>
+</div>
+<script>
+try{
+  const isAdmin = (localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1');
+  if (isAdmin) {
+    const top = document.getElementById('topnav');
+    top.innerHTML = `
+      <a href="/">登录</a>
+      <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
+      <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
+      <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+      <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+    `;
+    document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
+  } else {
+    if (localStorage.getItem('token')) {
+      document.getElementById('logoutLink').style.display = 'inline';
+      const o = document.getElementById('ordersLink'); if (o) o.style.display = 'inline';
+    }
+  }
+}catch(e){}
+</script>
+
+<h2>订单管理</h2>
+<div>
+  <label>状态：<select id="statusFilter"><option value="">全部</option><option>待发货</option><option>已支付</option></select></label>
+  <label style="margin-left:12px">开始：<input id="start" type="date"></label>
+  <label style="margin-left:12px">结束：<input id="end" type="date"></label>
+  <button onclick="load()">筛选</button>
+</div>
+<table border="1" cellpadding="6" style="width:100%;margin-top:8px;border-collapse:collapse"><thead><tr><th>ID</th><th>用户</th><th>总额</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+<tbody id="list"></tbody></table>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token || !(localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1')) {
+  alert('需要管理员权限'); location.href = '/';
+}
+const ax = axios.create({ baseURL: '/api/admin/orders', headers: { Authorization: 'Bearer ' + token }});
+async function load() {
+  const status = document.getElementById('statusFilter').value;
+  const start = document.getElementById('start').value;
+  const end = document.getElementById('end').value;
+  const r = await ax.get('/', { params: { status, start, end }});
+  const rows = r.data || [];
+  document.getElementById('list').innerHTML = rows.map(o => `
+    <tr data-id="${o.id}">
+      <td>${o.id}</td>
+      <td>${o.username}</td>
+      <td>￥${Number(o.total).toFixed(2)}</td>
+      <td class="status">${o.status || '未发货'}</td>
+      <td>${o.created_at}</td>
+      <td>
+        ${(o.status === '已发货') ? '' : `<button class="shipBtn">发货</button>`}
+      </td>
+    </tr>
+  `).join('');
+  attach();
+}
+function attach(){
+  // 发货按钮：确认后将状态设为 已发货，并更新行内状态显示
+  document.querySelectorAll('.shipBtn').forEach(b=> b.onclick = async (e)=>{
+    if (!confirm('确认发货该订单？')) return;
+    const tr = e.target.closest('tr'); const id = tr.dataset.id;
+    try{
+      await ax.put('/' + id, { status: '已发货' });
+      const st = tr.querySelector('.status'); if (st) st.innerText = '已发货';
+      e.target.remove();
+      alert('已发货');
+    }catch(err){ alert('发货失败'); }
+  });
+}
+load();
+</script>
+</body>
+</html>
