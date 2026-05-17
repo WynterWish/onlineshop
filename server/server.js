@@ -19,6 +19,10 @@ app.use('/api/auth',    require('./routes/auth'));
 app.use('/api/products',require('./routes/products'));
 app.use('/api/cart',    require('./routes/cart'));
 app.use('/api/orders',  require('./routes/orders'));
+app.use('/api/collect', require('./routes/collect'));
+app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/recommend', require('./routes/recommend'));
+app.use('/api/sales', require('./routes/sales'));
 
 /* ② 管理接口 */
 app.use('/api/admin/products', require('./routes/admin-product'));

@@ -1,0 +1,20 @@
+# Node
+node_modules/
+
+# Environment
+*.env
+.env
+server/.env
+
+# Databases
+*.db
+server/onlineshop.db
+onlineshop.db
+
+# Editor
+.vscode/
+.DS_Store
+
+# Backup files
+*.bak
+

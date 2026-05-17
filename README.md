@@ -1,82 +1,81 @@
-# 在线商店（onlineshop）
+# �����̵꣨onlineshop��
 
-## 项目简介
+## ��Ŀ���
 
-这是一个基于 Node.js + Express 的简单在线商店示例项目，前端为静态 HTML/JS 页面，后端提供 REST API 并使用 SQLite 作为持久化存储。该项目适合作为学习用户认证、购物车、下单和简单管理员管理功能的练习样例。
+����һ������ Node.js + Express �ļ������̵�ʾ����Ŀ��ǰ��Ϊ��̬ HTML/JS ҳ�棬����ṩ REST API ��ʹ�� SQLite ��Ϊ�־û��洢������Ŀ�ʺ���Ϊѧϰ�û���֤�����ﳵ���µ��ͼ򵥹���Ա�������ܵ���ϰ������
 
-## 技术栈
+## ����ջ
 
-- 后端：Node.js、Express
-- 数据库：SQLite（sqlite3）
-- 身份认证：bcrypt（密码哈希）、jsonwebtoken（JWT）
-- 配置：dotenv
-- 其他中间件：cors、express-validator、nodemailer（用于邮件）
+- ��ˣ�Node.js��Express
+- ���ݿ⣺SQLite��sqlite3��
+- ������֤��bcrypt�������ϣ����jsonwebtoken��JWT��
+- ���ã�dotenv
+- �����м����cors��express-validator��nodemailer�������ʼ���
 
-（依赖可见于 package.json）
+�������ɼ��� package.json��
 
-## 目录结构（概要）
+## Ŀ¼�ṹ����Ҫ��
 
-- client/        前端静态页面（index.html、login.html 等）
-- server/        后端代码
-	- server.js     服务器入口，挂载路由与静态资源
-	- db.js         SQLite 数据库初始化与访问
-	- routes/       各功能路由（auth, products, cart, orders, admin-* 等）
-	- middleware/   中间件（认证、权限等）
+- client/        ǰ�˾�̬ҳ�棨index.html��login.html �ȣ�
+- server/        ��˴���
+  - server.js     ��������ڣ�����·���뾲̬��Դ
+  - db.js         SQLite ���ݿ��ʼ�������
+  - routes/       ������·�ɣ�auth, products, cart, orders, admin-* �ȣ�
+  - middleware/   �м������֤��Ȩ�޵ȣ�
 
-## 快速开始（开发环境）
+## ���ٿ�ʼ������������
 
-先确保本机安装了 Node.js 与 npm。然后在项目根目录执行：
+��ȷ��������װ�� Node.js �� npm��Ȼ������Ŀ��Ŀ¼ִ�У�
 
-```bash
+`ash
 npm install
-```
+`
 
-创建一个 .env 文件（项目根目录）并至少设置：
+����һ�� .env �ļ�����Ŀ��Ŀ¼�����������ã�
 
-```
+`
 JWT_SECRET=your_strong_secret_here
 PORT=5000
-```
+`
 
-启动服务：
+��������
 
-```bash
+`ash
 node server/server.js
-```
+`
 
-默认会在 http://localhost:5000 提供服务（可通过 PORT 环境变量修改）。
+Ĭ�ϻ��� http://localhost:5000 �ṩ���񣨿�ͨ�� PORT ���������޸ģ���
 
-注：首次启动时会在当前工作目录创建 onlineshop.db，并初始化表与示例商品数据；如果不存在管理员账号，会自动创建一个 admin（默认密码示例为 123456，请生产环境修改）。
+ע���״�����ʱ���ڵ�ǰ����Ŀ¼���� onlineshop.db������ʼ������ʾ����Ʒ���ݣ���������ڹ���Ա�˺ţ����Զ�����һ�� admin��Ĭ������ʾ��Ϊ 123456�������������޸ģ���
 
-## API 概览（常用端点）
+## API ���������ö˵㣩
 
-- POST /api/auth/register — 用户注册（请求体：username, password, email）
-- POST /api/auth/login — 用户登录（返回 JWT）
-- GET /api/auth/me — 获取当前用户信息（需 Authorization: Bearer <token>）
-- GET /api/products — 列出所有商品（支持 ?q= 模糊搜索）
-- GET/POST/PATCH/DELETE /api/cart — 购物车增删改查（需登录）
-- POST /api/orders — 创建订单（需登录）
-- 管理接口：/api/admin/products, /api/admin/orders（需管理员权限）
+- POST /api/auth/register �� �û�ע�ᣨ�����壺username, password, email��
+- POST /api/auth/login �� �û���¼������ JWT��
+- GET /api/auth/me �� ��ȡ��ǰ�û���Ϣ���� Authorization: Bearer <token>��
+- GET /api/products �� �г�������Ʒ��֧�� ?q= ģ��������
+- GET/POST/PATCH/DELETE /api/cart �� ���ﳵ��ɾ�Ĳ飨���¼��
+- POST /api/orders �� �������������¼��
+- �����ӿڣ�/api/admin/products, /api/admin/orders�������ԱȨ�ޣ�
 
-具体实现请参阅 server/routes/ 下对应路由文件。
+����ʵ������� server/routes/ �¶�Ӧ·���ļ���
 
-## 数据库
+## ���ݿ�
 
-项目使用 SQLite（单文件数据库 onlineshop.db）。数据库由 server/db.js 负责初始化：创建表（users, products, cart, orders, messages）并插入部分示例商品。
+��Ŀʹ�� SQLite�����ļ����ݿ� onlineshop.db�������ݿ��� server/db.js �����ʼ������������users, products, cart, orders, messages�������벿��ʾ����Ʒ��
 
-## 开发与调试要点
+## ���������Ҫ��
 
-- 请在开发时设置合理的 JWT_SECRET，不要使用演示秘钥。  
-- 如果要重建数据库，停止服务并删除 onlineshop.db，下次启动会重新初始化（注意：会丢失现有数据）。
-- 推荐使用 Postman / curl 或浏览器控制台测试 API 与前端交互。
+- ���ڿ���ʱ���ú����� JWT_SECRET����Ҫʹ����ʾ��Կ��
+- ���Ҫ�ؽ����ݿ⣬ֹͣ����ɾ�� onlineshop.db���´����������³�ʼ����ע�⣺�ᶪʧ�������ݣ���
+- �Ƽ�ʹ�� Postman / curl �����������̨���� API ��ǰ�˽�����
 
-## 生产化建议
+## ����������
 
-- 将静态文件放到 CDN 或 Nginx 静态托管，后端部署在受管进程（PM2 / systemd）后端并启用 HTTPS。  
-- 将 SQLite 换为 PostgreSQL/MySQL 等服务型数据库以支持并发与高可用。  
-- 添加日志、异常监控（如 Sentry）、API 速率限制、安全头配置与输入校验。  
+- ����̬�ļ��ŵ� CDN �� Nginx ��̬�йܣ���˲������ܹܽ��̣�PM2 / systemd����˲����� HTTPS��
+- �� SQLite ��Ϊ PostgreSQL/MySQL �ȷ��������ݿ���֧�ֲ�����߿��á�
+- ������־���쳣��أ��� Sentry����API �������ơ���ȫͷ����������У�顣
 
-## 学号姓名
+## ѧ������
 
 202330451841
-吴易玮

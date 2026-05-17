@@ -42,3 +42,42 @@ document.addEventListener('DOMContentLoaded', function () {
   } catch (e) {}
 });
 
+// 浏览行为采集：记录停留时长与商品类别（如果页面提供）
+(function(){
+  let start = Date.now();
+  function getCategory(){
+    // 优先使用 meta 标签，其次 body 的 data-category，再 fallback 为 unknown
+    const m = document.querySelector('meta[name="product-category"]');
+    if (m && m.content) return m.content;
+    if (document.body && document.body.dataset && document.body.dataset.category) return document.body.dataset.category;
+    return null;
+  }
+  function sendBrowse(durationSec){
+    const payload = { type: 'browse', category: getCategory(), duration: Math.round(durationSec) };
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    // 使用 sendBeacon 在卸载时更可靠
+    const url = '/api/collect';
+    const body = JSON.stringify(payload);
+    if (navigator.sendBeacon) {
+      const blob = new Blob([body], { type: 'application/json' });
+      navigator.sendBeacon(url, blob);
+    } else {
+      fetch(url, { method: 'POST', headers, body }).catch(()=>{});
+    }
+  }
+  // 当页面不可见或卸载时发送停留时长（秒）
+  function handleVisibility(){
+    if (document.visibilityState === 'hidden') {
+      const dur = (Date.now() - start) / 1000;
+      sendBrowse(dur);
+    }
+  }
+  window.addEventListener('visibilitychange', handleVisibility);
+  window.addEventListener('beforeunload', function(){
+    const dur = (Date.now() - start) / 1000;
+    sendBrowse(dur);
+  });
+})();
+

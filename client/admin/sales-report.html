@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>销售统计报表</title>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="/js/common.js"></script>
+</head>
+<body>
+<div id="topnav" style="background:#f5f5f5;padding:8px;border-bottom:1px solid #ddd;"></div>
+<script>
+const top = document.getElementById('topnav');
+try{ top.innerHTML = `
+    <a href="/">登录</a>
+    <a id="adminSalesReportLink" href="/admin/sales-report.html" style="margin-left:12px">销售统计报表</a>
+    <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
+`;}catch(e){}
+</script>
+
+<h2>销售统计报表（可视化）</h2>
+<div style="display:flex;gap:20px;flex-wrap:wrap">
+  <div style="flex:1;min-width:320px"><h4>销售排行（Top Products）</h4><canvas id="chartTop" height="240"></canvas></div>
+  <div style="flex:1;min-width:320px"><h4>销售趋势（收入）</h4><canvas id="chartTrend" height="240"></canvas></div>
+  <div style="flex:1;min-width:320px"><h4>异常日</h4><div id="anomalies">加载中...</div></div>
+  <div style="width:100%"><h4>按类别 / 状态 / 库存 </h4>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div style="flex:1;min-width:300px"><h5>按类别收入</h5><canvas id="chartByCategory" height="240"></canvas></div>
+      <div style="flex:1;min-width:300px"><h5>按状态统计</h5><canvas id="chartByStatus" height="240"></canvas></div>
+      <div style="flex:1;min-width:300px"><h5>库存分布</h5><canvas id="chartByStock" height="240"></canvas></div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const token = localStorage.getItem('token');
+if (!token || !(localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === '1')) { alert('需要管理员权限'); location.href = '/'; }
+
+function formatCurrency(n){ return '￥' + Number(n||0).toFixed(2); }
+
+async function draw(){
+  try{
+    const [topRes, trendRes, reportsRes, anomaliesRes] = await Promise.all([
+      fetch('/api/analytics/top-products?limit=10', { headers:{ Authorization: 'Bearer ' + token }}),
+      fetch('/api/analytics/sales-trend?range=month', { headers:{ Authorization: 'Bearer ' + token }}),
+      fetch('/api/analytics/reports', { headers:{ Authorization: 'Bearer ' + token }}),
+      fetch('/api/analytics/anomalies', { headers:{ Authorization: 'Bearer ' + token }})
+    ]);
+    if (!topRes.ok || !trendRes.ok || !reportsRes.ok) return document.getElementById('anomalies').innerText = '无法获取数据';
+    const tops = await topRes.json();
+    const trend = await trendRes.json();
+    const reports = await reportsRes.json();
+    const anomalies = (await anomaliesRes.json()).anomalies || [];
+
+    // Top products bar chart
+    const ctxTop = document.getElementById('chartTop').getContext('2d');
+    new Chart(ctxTop, { type: 'bar', data: { labels: tops.map(t=>t.name), datasets:[{ label:'销量', data: tops.map(t=>t.sold), backgroundColor:'rgba(54,162,235,0.6)' }] }, options:{ responsive:true } });
+
+    // Trend line chart
+    const ctxTrend = document.getElementById('chartTrend').getContext('2d');
+    new Chart(ctxTrend, { type:'line', data:{ labels: trend.map(r=>r.period).reverse(), datasets:[{ label:'收入', data: trend.map(r=>r.revenue).reverse(), borderColor:'rgba(255,99,132,0.8)', fill:false }] }, options:{ responsive:true } });
+
+    // By category revenue pie/bar
+    const byCat = reports.byCategory || [];
+    const ctxCat = document.getElementById('chartByCategory').getContext('2d');
+    new Chart(ctxCat, { type:'pie', data:{ labels: byCat.map(c=>c.category), datasets:[{ data: byCat.map(c=>c.revenue), backgroundColor: byCat.map((_,i)=>`hsl(${i*40%360} 70% 50%)`) }] }, options:{ responsive:true } });
+
+    // By status
+    const byStatus = reports.byStatus || [];
+    const ctxStatus = document.getElementById('chartByStatus').getContext('2d');
+    new Chart(ctxStatus, { type:'doughnut', data:{ labels: byStatus.map(s=>s.status), datasets:[{ data: byStatus.map(s=>s.orders), backgroundColor:byStatus.map((_,i)=>`hsl(${i*70%360} 60% 45%)`) }] }, options:{ responsive:true } });
+
+    // By stock: show counts
+    const byStock = reports.byStock || [];
+    const ctxStock = document.getElementById('chartByStock').getContext('2d');
+    new Chart(ctxStock, { type:'bar', data:{ labels: byStock.map(s=>s.category + ' / ' + s.stock), datasets:[{ label:'SKU数量', data: byStock.map(s=>s.sku_count), backgroundColor:'rgba(153,102,255,0.6)' }] }, options:{ responsive:true } });
+
+    // anomalies list
+    document.getElementById('anomalies').innerHTML = anomalies.length ? anomalies.map(a=>`<div>${a.day}: ${formatCurrency(a.revenue)}</div>`).join('') : '无异常';
+
+  }catch(e){ document.getElementById('anomalies').innerText = '绘制失败'; }
+}
+draw();
+</script>
+<script src="/js/admin-topnav.js"></script>
+</body>
+</html>

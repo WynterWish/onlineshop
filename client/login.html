@@ -8,7 +8,8 @@
 
 <div>
   <label><input type="radio" name="mode" value="user" checked/> 用户登录</label>
-  <label style="margin-left:12px"><input type="radio" name="mode" value="admin"/> 管理员登录</label>
+  <label style="margin-left:12px"><input type="radio" name="mode" value="sales"/> 销售人员登录</label>
+  <label style="margin-left:12px"><input type="radio" name="mode" value="admin"/> 管理者登录</label>
 </div>
 
 <!-- 用户登录表单 -->
@@ -19,9 +20,17 @@
   <a href="/register.html" style="margin-left:12px">注册</a>
 </form>
 
-<!-- 管理员登录表单（默认隐藏） -->
+<!-- 销售人员登录表单（默认隐藏） -->
+<form id="salesForm" style="display:none;margin-top:8px">
+  销售人员用户名: <input name="username" required><br>
+  密码: <input type="password" name="password" required><br>
+  <button id="salesLogin">登录</button>
+  <span style="margin-left:12px;color:#666;">请管理员分配账号</span>
+</form>
+
+<!-- 管理者登录表单（默认隐藏） -->
 <form id="adminForm" style="display:none;margin-top:8px">
-  管理员用户名: <input name="username" required><br>
+  管理者用户名: <input name="username" required><br>
   密码: <input type="password" name="password" required><br>
   <button id="adminLogin">登录</button>
   <a href="/admin/register.html" style="margin-left:12px">注册</a>
@@ -29,10 +38,16 @@
 
 <script>
 const userForm = document.getElementById('userForm');
+const salesForm = document.getElementById('salesForm');
 const adminForm = document.getElementById('adminForm');
 document.querySelectorAll('input[name="mode"]').forEach(r => r.onchange = (e) => {
-  if (e.target.value === 'admin') { userForm.style.display = 'none'; adminForm.style.display = 'block'; }
-  else { userForm.style.display = 'block'; adminForm.style.display = 'none'; }
+  if (e.target.value === 'sales') {
+    userForm.style.display = 'none'; salesForm.style.display = 'block'; adminForm.style.display = 'none';
+  } else if (e.target.value === 'admin') {
+    userForm.style.display = 'none'; salesForm.style.display = 'none'; adminForm.style.display = 'block';
+  } else {
+    userForm.style.display = 'block'; salesForm.style.display = 'none'; adminForm.style.display = 'none';
+  }
 });
 
 userForm.onsubmit = async (e) => {
@@ -42,11 +57,31 @@ userForm.onsubmit = async (e) => {
     body: JSON.stringify(Object.fromEntries(new FormData(e.target)))
   });
   const json = await res.json();
-  if (json.token) { localStorage.setItem('token', json.token); localStorage.setItem('isAdmin', json.isAdmin); location.href = json.isAdmin ? 'admin/products.html' : 'index.html'; }
-  else alert('登录失败');
+  if (json.token) {
+    localStorage.setItem('token', json.token);
+    localStorage.setItem('isAdmin', json.isAdmin);
+    localStorage.setItem('role', json.role || 'customer');
+    location.href = json.isAdmin ? 'admin/products.html' : 'index.html';
+  } else alert('登录失败');
 };
 
-// 管理员登录
+// 销售人员登录
+salesForm.onsubmit = async (e) => {
+  e.preventDefault();
+  const res = await fetch('/api/auth/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: e.target.username.value, password: e.target.password.value })
+  });
+  const json = await res.json();
+  if (json.token && (json.isAdmin || json.role === 'sales')) {
+    localStorage.setItem('token', json.token);
+    localStorage.setItem('isAdmin', json.isAdmin);
+    localStorage.setItem('role', json.role || 'sales');
+    location.href = 'admin/products.html';
+  } else alert('销售人员登录失败');
+};
+
+// 管理者登录
 adminForm.onsubmit = async (e) => {
   e.preventDefault();
   const res = await fetch('/api/auth/login', {
@@ -54,15 +89,22 @@ adminForm.onsubmit = async (e) => {
     body: JSON.stringify({ username: e.target.username.value, password: e.target.password.value })
   });
   const json = await res.json();
-  if (json.token && json.isAdmin) { localStorage.setItem('token', json.token); localStorage.setItem('isAdmin', json.isAdmin); location.href = 'admin/products.html'; }
-  else alert('管理员登录失败');
+  if (json.token && json.isAdmin) {
+    localStorage.setItem('token', json.token);
+    localStorage.setItem('isAdmin', json.isAdmin);
+    localStorage.setItem('role', json.role || 'admin');
+    location.href = 'admin/products.html';
+  } else alert('管理者登录失败');
 };
 
-// 如果 URL 包含 ?mode=admin，则自动切换到管理员登录
+// 如果 URL 包含 ?mode=sales 或 ?mode=admin，则自动切换到指定登录模式
 const params = new URLSearchParams(location.search);
-if (params.get('mode') === 'admin') {
+if (params.get('mode') === 'sales') {
+  document.querySelector('input[name="mode"][value="sales"]').checked = true;
+  userForm.style.display = 'none'; salesForm.style.display = 'block'; adminForm.style.display = 'none';
+} else if (params.get('mode') === 'admin') {
   document.querySelector('input[name="mode"][value="admin"]').checked = true;
-  userForm.style.display = 'none'; adminForm.style.display = 'block';
+  userForm.style.display = 'none'; salesForm.style.display = 'none'; adminForm.style.display = 'block';
 }
 </script>
 </body></html>

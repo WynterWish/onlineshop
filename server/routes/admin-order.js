@@ -4,11 +4,14 @@ const requireAdmin = require('../middleware/requireAdmin');
 const nodemailer = require('nodemailer');
 const router = express.Router();
 router.use(requireAdmin);
+const { logOperation } = require('../middleware/opLogger');
 
-const transporter = nodemailer.createTransport({
-  service: 'qq',
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-});
+const transporter = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
+  ? nodemailer.createTransport({
+      service: 'qq',
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    })
+  : null;
 
 /* 订单列表 */
 router.get('/', (req, res) => {
@@ -34,14 +37,21 @@ router.put('/:id', (req, res) => {
     db.get('SELECT o.userId AS userId, u.email AS email FROM orders o JOIN users u ON o.userId = u.id WHERE o.id=?',
       req.params.id, (e, row) => {
         if (!e && row) {
-          // 保留原有邮件尝试（若配置了 SMTP）
-          try { transporter.sendMail({ from: process.env.EMAIL_USER, to: row.email, subject: '订单状态更新', text: `您的订单 #${req.params.id} 状态已更新为：${status}` }); } catch(err) { console.error('sendMail err', err); }
+          if (transporter && row.email) {
+            transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: row.email,
+              subject: '订单状态更新',
+              text: `您的订单 #${req.params.id} 状态已更新为：${status}`
+            }).catch(err => console.error('sendMail err', err));
+          }
           // 同时在站内消息表中插入一条消息（用于应用内邮箱展示）
           const subj = (status === '已发货') ? '发货成功' : '订单状态更新';
           const body = (status === '已发货') ? `您的订单 #${req.params.id} 已成功发货，感谢购买！` : `您的订单 #${req.params.id} 状态已更新为：${status}`;
           db.run('INSERT INTO messages (userId,subject,body) VALUES (?,?,?)', [row.userId, subj, body], (ie) => { if (ie) console.error('insert message err', ie); });
         }
       });
+    try{ logOperation(req, 'update_order_status', { id: req.params.id, status }); }catch(e){}
     res.json({ message: '状态已更新' });
   });
 });

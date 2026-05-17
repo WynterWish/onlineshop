@@ -9,9 +9,7 @@
   <a href="/">登录</a>
   <a href="/index.html" style="margin-left:12px">商品列表</a>
   <a href="/cart.html" style="margin-left:12px">购物车</a>
-  <a id="adminLink" href="/admin/products.html" style="margin-left:12px;display:none">商品管理</a>
-  <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px;display:none">订单管理</a>
-  <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px;display:none">销售报表</a>
+  <a id="adminSalesReportLink" href="/admin/sales-report.html" style="margin-left:12px;display:none">销售统计报表</a>
   <a id="logoutLink" href="#" style="margin-left:12px;display:none">注销</a>
 </div>
 <script>
@@ -22,9 +20,7 @@ try{
   const top = document.getElementById('topnav');
   top.innerHTML = `
     <a href="/">登录</a>
-    <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
-    <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
-    <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+    <a id="adminSalesReportLink" href="/admin/sales-report.html" style="margin-left:12px">销售统计报表</a>
     <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
   `;
   document.getElementById('logoutLink').addEventListener('click', (e)=>{ e.preventDefault(); try{ localStorage.clear(); sessionStorage.clear(); }catch(err){}; location.href = '/'; });
@@ -47,5 +43,7 @@ if (!token) { alert('请先登录'); location.href = '/'; }
   }catch(e){ document.getElementById('summary').innerText = '获取失败'; }
 })();
 </script>
+
+<script src="/js/admin-topnav.js"></script>
 </body>
 </html>

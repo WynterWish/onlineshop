@@ -39,6 +39,8 @@ try{
 <h2>商品列表</h2>
 <div style="margin:8px 0"><input id="search" placeholder="搜索商品（按名称）" style="width:240px;padding:6px"/></div>
 <div id="list"></div>
+<h3>为你推荐</h3>
+<div id="recommendations">加载中...</div>
 <script>
 let searchTimer;
 async function load(q = '') {
@@ -58,6 +60,27 @@ document.getElementById('search').addEventListener('input', (e) => {
 });
 
 load();
+
+// 推荐模块：调用 /api/auth/me 获取用户 id，再请求推荐
+async function loadRecommendations(){
+  const token = localStorage.getItem('token');
+  const container = document.getElementById('recommendations');
+  if (!token) { container.innerText = '请登录以查看个性化推荐'; return; }
+  try{
+    const me = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token }});
+    if (!me.ok) { container.innerText = '无法获取用户信息'; return; }
+    const ud = await me.json();
+    const r = await fetch('/api/recommend/cf/' + ud.id, { headers: { Authorization: 'Bearer ' + token }});
+    if (!r.ok) { container.innerText = '无法获取推荐'; return; }
+    const items = await r.json();
+    if (!items || items.length===0) { container.innerText = '暂无推荐'; return; }
+    container.innerHTML = items.map(it => {
+      const score = (it.score !== undefined && it.score !== null) ? ` <span style="color:#666">(${Number(it.score).toFixed(2)})</span>` : '';
+      return `<div>${it.name || it.title || ('#'+it.id)}${score}</div>`;
+    }).join('');
+  }catch(e){ container.innerText = '推荐加载失败'; }
+}
+loadRecommendations();
 
 async function add(id) {
   const token = localStorage.getItem('token');

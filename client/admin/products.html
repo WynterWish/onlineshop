@@ -8,10 +8,8 @@
   <a href="/index.html" style="margin-left:12px">商品列表</a>
   <a href="/cart.html" style="margin-left:12px">购物车</a>
     <a id="ordersLink" href="/orders.html" style="margin-left:12px;display:none">我的订单</a>
-    <a id="adminLink" href="/admin/products.html" style="margin-left:12px;display:none" data-protect="auth">商品管理</a>
-    <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px;display:none">订单管理</a>
+    <a id="adminSalesReportLink" href="/admin/sales-report.html" style="margin-left:12px;display:none">销售统计报表</a>
   <a id="logoutLink" href="#" style="margin-left:12px;display:none">注销</a>
-     <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px;display:none">销售报表</a>
 </div>
   <script>
   try{
@@ -20,9 +18,7 @@
       const top = document.getElementById('topnav');
       top.innerHTML = `
         <a href="/">登录</a>
-        <a id="adminLink" href="/admin/products.html" style="margin-left:12px">商品管理</a>
-        <a id="adminOrdersLink" href="/admin/orders.html" style="margin-left:12px">订单管理</a>
-        <a id="adminSalesLink" href="/admin/sales.html" style="margin-left:12px">销售报表</a>
+        <a id="adminSalesReportLink" href="/admin/sales-report.html" style="margin-left:12px">销售统计报表</a>
         <a id="logoutLink" href="#" style="margin-left:12px">注销</a>
       `;
       // 绑定注销
@@ -39,6 +35,8 @@
     });
   }catch(e){};
   </script>
+
+<script src="/js/admin-topnav.js"></script>
 
 <h2>商品管理</h2>
 <div>
